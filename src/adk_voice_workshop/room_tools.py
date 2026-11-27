@@ -5,6 +5,7 @@ import logging
 import os
 
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 ROOMS = [
     {"name": "Orchid", "available_from": 15, "capacity": 4},

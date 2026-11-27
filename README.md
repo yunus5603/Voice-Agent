@@ -1,154 +1,162 @@
-# 🎙️ Voice Interview Coach
+# 🎙️ ADK Voice Agent
 
-[![CI](https://github.com/yunus5603/Voice-Agent/actions/workflows/ci.yml/badge.svg)](https://github.com/yunus5603/Voice-Agent/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.11--3.13-blue?logo=python&logoColor=white)](https://www.python.org/)
-[![Google ADK](https://img.shields.io/badge/Google%20ADK-2.x-4285F4?logo=google&logoColor=white)](https://google.github.io/adk-docs/)
-[![Gemini Live](https://img.shields.io/badge/Gemini%20Live-native%20audio-8E75B2)](https://ai.google.dev/gemini-api/docs/live)
-[![FastAPI](https://img.shields.io/badge/FastAPI-WebSockets-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Google ADK](https://img.shields.io/badge/Google%20ADK-Agent%20Framework-4285F4?logo=google&logoColor=white)](https://google.github.io/adk-docs/)
+[![Gemini Live](https://img.shields.io/badge/Gemini%20Live-Voice%20API-8E75B2)](https://ai.google.dev/gemini-api/docs/live)
+[![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![uv](https://img.shields.io/badge/uv-Package%20Manager-DE5FE9)](https://docs.astral.sh/uv/)
 
-**Practise the interview before the real one.** Paste a job description, and a
-spoken AI interviewer runs a realistic interview for that role: it asks
-questions out loud, follows up on what you actually said, keeps time, and
-stops the moment you interrupt.
+A real-time voice assistant that helps users find meeting rooms through natural
+conversation. It combines Google ADK, Gemini Live, FastAPI, WebSockets, browser
+audio, typed tools, and streaming transcripts.
 
-![Setup screen: paste a job description and choose the interview type](docs/images/interview-setup.png)
+![ADK Voice Agent interface](docs/images/adk-voice-agent.png)
 
-## How it works
+## ✨ Key Features
 
-1. **Plan.** Gemini Flash turns the job description into 3 to 6 tailored
-   questions, each with what it probes, follow-ups, and a scoring rubric
-   (structured output, validated with Pydantic). Without an API key, or if the
-   call fails, the plan comes from curated [question packs](src/voice_agent/interview/packs/).
-2. **Interview.** A Google ADK agent on Gemini Live runs the conversation over
-   a WebSocket. The plan lives in session state, not the prompt: the agent asks
-   for the next question through a tool, so it can't skip or repeat questions,
-   and timing is enforced in code.
-3. **Notes.** After each answer the interviewer saves a short private note
-   through a tool. Notes and progress are kept for the feedback report.
-4. **Report** *(next milestone)*. An evaluator scores each answer against its
-   rubric with quoted evidence, plus delivery stats such as pace and filler words.
+- 🎙️ Real-time voice conversations with interruption support
+- 🏢 Meeting-room search through a typed agent tool
+- 🔊 Live audio, transcripts, tool events, and status updates
+- ⚡ Browser-to-agent streaming over WebSockets
+- 🛡️ Origin checks, payload limits, session limits, and safe errors
+- 📋 Privacy-aware logging and deterministic session cleanup
 
-![Interview room: progress, countdown and live latency](docs/images/interview-room.png)
+## 🛠️ Technology Stack
 
-## Architecture
+### Core Components
 
-![Architecture: browser, FastAPI service, ADK runner, Gemini Live and the interview tools](docs/images/architecture.svg)
+- **Agent Framework**: Google ADK
+- **Models**: Gemini text and Gemini Live
+- **Backend**: FastAPI and Uvicorn
+- **Transport**: WebSockets
+- **Frontend**: HTML, CSS, and JavaScript
+- **Package Manager**: uv
 
-| Piece | Where | What it does |
-| --- | --- | --- |
-| Planner | [`interview/planner.py`](src/voice_agent/interview/planner.py) | Job description to `InterviewPlan`, with a question-pack fallback |
-| Interview state | [`interview/state.py`](src/voice_agent/interview/state.py) | Pure functions: next question, notes, time left, end |
-| Interviewer tools | [`interview/tools.py`](src/voice_agent/interview/tools.py) | `next_question`, `add_note`, `time_left`, `end_interview` |
-| Interviewer agent | [`interview/agent.py`](src/voice_agent/interview/agent.py) | Persona and interview rules, built from session state |
-| Voice bridge | [`server.py`](src/voice_agent/server.py) | REST API, WebSocket, validation, limits, cleanup |
-| Latency | [`metrics.py`](src/voice_agent/metrics.py) | Per-turn response time, p50/p95, barge-ins |
+### Quality and Operations
 
-More detail, including how interruptions, slow tools and guardrails work, is in
-**[docs/architecture.md](docs/architecture.md)**.
+- **Configuration**: `.env` with `python-dotenv`
+- **Testing**: pytest
+- **Linting**: Ruff
+- **Runtime Controls**: origin validation, message limits, concurrency limits,
+  session resumption, and privacy-aware logs
 
-## Quick start
+## 🚀 Quick Start
 
-You need Python 3.11 to 3.13, [uv](https://docs.astral.sh/uv/getting-started/installation/),
-a Chromium-based browser, and a [Gemini API key](https://aistudio.google.com/apikey)
-with Live API access.
+### Prerequisites
+
+- Python 3.11, 3.12, or 3.13
+- [uv](https://docs.astral.sh/uv/getting-started/installation/)
+- A Chromium-based browser with microphone access
+- A Google AI Studio API key with Gemini Live access
+
+### Installation
+
+1. **Clone the repository**
+
+	```bash
+	git clone <repository-url>
+	cd adk-voice-agent
+	```
+
+2. **Install dependencies**
+
+	```bash
+	uv sync
+	```
+
+3. **Create the environment file**
+
+	Windows:
+
+	```bash
+	copy .env.example .env
+	```
+
+	macOS/Linux:
+
+	```bash
+	cp .env.example .env
+	```
+
+	Add `GEMINI_API_KEY` or `GOOGLE_API_KEY` to `.env`. Keep the file private
+	and never commit the key.
+
+4. **Run the environment check**
+
+	```bash
+	uv run python scripts/preflight.py
+	```
+
+5. **Start the application**
+
+	```bash
+	cd checkpoints/06_production
+	uv run uvicorn server:app --reload --port 8002
+	```
+
+	Open [http://localhost:8002](http://localhost:8002), connect the microphone,
+	and ask for a meeting room. Headphones are recommended to prevent feedback.
+
+For the minimal streaming server, run it on port `8001`:
 
 ```bash
-git clone https://github.com/yunus5603/Voice-Agent.git
-cd Voice-Agent
-uv sync
-cp .env.example .env          # then set GEMINI_API_KEY
-uv run uvicorn voice_agent.server:app --reload --port 8002
+cd checkpoints/05_custom_streaming
+uv run uvicorn server:app --reload --port 8001
 ```
 
-Open <http://localhost:8002>, paste a job description, pick the interview type,
-and click **Start interview**. Use headphones so the interviewer doesn't hear
-itself.
-
-### With Docker
-
-```bash
-docker build -t voice-interview-coach .
-docker run --rm -p 8080:8080 --env-file .env \
-  -e WS_ALLOWED_ORIGINS=http://localhost:8080 voice-interview-coach
-```
-
-### Deploy
-
-See **[docs/deploy-cloud-run.md](docs/deploy-cloud-run.md)** for a Cloud Run
-deploy with the key in Secret Manager.
-
-## API
-
-| Method | Path | Purpose |
-| --- | --- | --- |
-| `POST` | `/api/interviews` | Plan an interview. Body: `job_description`, `interview_type` (`behavioral` or `technical`), `level`, `minutes` (5 to 30), `persona`. Returns an `interview_id`; the questions stay on the server. |
-| `GET` | `/api/interviews/{id}` | Status and how many questions were asked |
-| `WS` | `/ws?interview_id=…` | The live interview. Each interview can be joined once. |
-| `GET` | `/healthz` | Liveness probe |
-
-The WebSocket carries 16 kHz PCM audio up, and audio, captions, `progress`,
-`interview_ended` and per-turn `metrics` events down.
-
-## Latency
-
-Every completed turn produces a record, shown in the room's panel and logged
-as one line (timings only, never transcript text):
-
-```text
-turn_metrics connection_id=3f9c1a2b7d4e turn=2 response_ms=… turn_ms=… tool_ms=[…] interrupted=False
-```
-
-See [Measuring latency](docs/architecture.md#measuring-latency) for what it
-includes and how to collect numbers from a session.
-
-## Configuration
+## ⚙️ Configuration
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `GEMINI_API_KEY` or `GOOGLE_API_KEY` | unset | Gemini authentication (without it, plans come from question packs and the live interview can't start) |
-| `LIVE_MODEL` | `gemini-3.1-flash-live-preview` | Voice model for the interviewer |
-| `TEXT_MODEL` | `gemini-3.6-flash` | Text model for planning |
-| `WS_ALLOWED_ORIGINS` | `http://localhost:8002,http://127.0.0.1:8002` | Browser origins allowed to open the WebSocket |
-| `MAX_ACTIVE_SESSIONS` | `20` | Concurrent live interviews before new ones get close code 1013 |
+| `GEMINI_API_KEY` or `GOOGLE_API_KEY` | unset | Gemini authentication |
+| `TEXT_MODEL` | `gemini-3.6-flash` | Text model |
+| `LIVE_MODEL` | `gemini-3.1-flash-live-preview` | Voice model |
+| `WS_ALLOWED_ORIGINS` | `http://localhost:8002,http://127.0.0.1:8002` | WebSocket origin allowlist |
 | `MAX_WS_MESSAGE_BYTES` | `32768` | Maximum WebSocket message size |
 | `MAX_AUDIO_CHUNK_BYTES` | `16384` | Maximum decoded audio chunk size |
+| `MAX_ACTIVE_SESSIONS` | `20` | Concurrent live-session limit |
 | `LOG_LEVEL` | `INFO` | Server log level |
 
-## Tests
+## 🏗️ Project Structure
 
-```bash
-uv run pytest            # no network or API key needed
-uv run ruff check .
-uv run ruff format --check .
+```text
+adk-voice-agent/
+├── checkpoints/
+│   ├── 05_custom_streaming/   # Minimal FastAPI/WebSocket app
+│   └── 06_production/         # Hardened voice application
+├── src/                       # Configuration and room-agent tools
+├── scripts/preflight.py       # Environment and configuration checks
+├── tests/                     # Automated tests
+├── docs/images/               # Application screenshots
+├── .env.example               # Environment template
+└── pyproject.toml             # Project metadata and dependencies
 ```
 
-Gemini is never called in tests. The planner is tested against a fake client
-(including failures), and the WebSocket tests run a scripted Gemini Live
-session in which the **real interview tools** execute against session state.
-One test drives a complete 5-question interview through the tools, which is
-the gate for this milestone.
+## 🔄 Data Flow
 
-## Roadmap
+1. The browser captures microphone audio as PCM data.
+2. Audio and control messages travel to the server over a WebSocket.
+3. The server forwards input to a Google ADK `LiveRequestQueue`.
+4. Gemini Live generates audio, transcripts, and tool events.
+5. The server streams events back to the browser for playback and display.
 
-- [x] **M1 Interview engine:** planning, interviewer agent, tools, question packs
-- [ ] **M2 Web app:** React + Vite UI, AudioWorklet mic pipeline, captions, waveform
-- [ ] **M3 Feedback report:** rubric scoring with quoted evidence, delivery stats, history
-- [ ] **M4 Ship:** public demo with guest mode and cost caps
-- [ ] **M5 Launch:** demo video, measured latency and eval results
+## ✅ Tests
 
-## Contributing
+```bash
+uv run pytest
+uv run ruff check .
+```
 
-The easiest way to help is a **question pack**: one YAML file of questions
-for a role (frontend, data engineering, product management, …). See
-[CONTRIBUTING.md](CONTRIBUTING.md).
+The test suite covers room filtering, input validation, tool failure handling,
+production server guards, and repository secret safety.
 
-## Learn how it was built
+## 🔒 Security
 
-The voice bridge started as a hands-on workshop. The [`workshop/`](workshop/)
-folder walks from a text-only agent to a hardened real-time voice service in
-seven checkpoints, with a facilitator runbook.
+Keep API keys server-side and never commit `.env`, credentials, or private
+transcripts. Before exposing the application publicly, add authentication,
+TLS, rate limiting, durable session storage, managed secrets, monitoring, and
+retention policies.
 
-## License
+---
 
-[MIT](LICENSE)
+<p align="center">Built with Google ADK and Gemini Live</p>
