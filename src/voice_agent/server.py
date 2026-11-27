@@ -10,7 +10,6 @@ import os
 from pathlib import Path
 from uuid import uuid4
 
-from agent import root_agent
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -20,11 +19,15 @@ from google.adk.runners import InMemoryRunner
 from google.genai import errors as genai_errors
 from google.genai import types
 
-logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
-logger = logging.getLogger("voice-workshop.production")
+from voice_agent import __version__
+from voice_agent.agent import root_agent
+from voice_agent.metrics import TurnTracker
 
-APP_NAME = "adk-voice-workshop-production"
-STATIC_DIR = Path(__file__).resolve().parents[1] / "05_custom_streaming" / "static"
+logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
+logger = logging.getLogger("voice_agent.server")
+
+APP_NAME = "adk-voice-agent"
+STATIC_DIR = Path(__file__).resolve().with_name("static")
 MAX_WS_MESSAGE_BYTES = int(os.getenv("MAX_WS_MESSAGE_BYTES", "32768"))
 MAX_AUDIO_CHUNK_BYTES = int(os.getenv("MAX_AUDIO_CHUNK_BYTES", "16384"))
 MAX_ACTIVE_SESSIONS = int(os.getenv("MAX_ACTIVE_SESSIONS", "20"))
@@ -41,7 +44,7 @@ runner = InMemoryRunner(app_name=APP_NAME, agent=root_agent)
 active_sessions: set[str] = set()
 active_sessions_lock = asyncio.Lock()
 
-app = FastAPI(title="ADK Voice Workshop: Production Hardening")
+app = FastAPI(title="ADK Voice Agent", version=__version__)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
@@ -52,6 +55,12 @@ class ClientMessageError(ValueError):
 @app.get("/")
 async def index() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
+
+
+@app.get("/healthz")
+async def healthz() -> dict:
+    """Liveness probe for Cloud Run and other orchestrators."""
+    return {"status": "ok", "version": __version__}
 
 
 def is_normal_close(exc: Exception) -> bool:
@@ -135,21 +144,29 @@ async def browser_to_agent(websocket: WebSocket, queue: LiveRequestQueue) -> Non
             queue.send_audio_stream_end()
 
 
-async def agent_to_browser(websocket: WebSocket, events) -> None:
+async def agent_to_browser(
+    websocket: WebSocket,
+    events,
+    tracker: TurnTracker | None = None,
+    connection_id: str = "-",
+) -> None:
     """Forward audio and safe event metadata without logging transcript content."""
+    tracker = tracker or TurnTracker()
     async for event in events:
         input_text = transcript_text(getattr(event, "input_transcription", None))
         output_text = transcript_text(getattr(event, "output_transcription", None))
         if input_text:
+            tracker.user_speech()
             await websocket.send_json({"type": "transcript", "speaker": "you", "text": input_text})
         if output_text:
             await websocket.send_json(
                 {"type": "transcript", "speaker": "agent", "text": output_text}
             )
 
-        for part in (event.content.parts if event.content and event.content.parts else []):
+        for part in event.content.parts if event.content and event.content.parts else []:
             mime_type = part.inline_data.mime_type if part.inline_data else None
             if part.inline_data and mime_type and mime_type.startswith("audio/pcm"):
+                tracker.agent_audio()
                 await websocket.send_json(
                     {
                         "type": "audio",
@@ -158,18 +175,39 @@ async def agent_to_browser(websocket: WebSocket, events) -> None:
                     }
                 )
             if part.function_call:
+                tracker.tool_call(part.function_call.name)
                 await websocket.send_json(
                     {"type": "tool", "phase": "call", "name": part.function_call.name}
                 )
             if part.function_response:
+                tracker.tool_result(part.function_response.name)
                 await websocket.send_json(
                     {"type": "tool", "phase": "result", "name": part.function_response.name}
                 )
 
         if event.interrupted:
+            tracker.interrupted()
             await websocket.send_json({"type": "interrupted"})
         if event.turn_complete:
+            metrics = tracker.turn_complete()
+            logger.info(
+                "turn_metrics connection_id=%s turn=%d response_ms=%s turn_ms=%d "
+                "tool_ms=%s interrupted=%s",
+                connection_id,
+                metrics.turn,
+                metrics.response_ms,
+                metrics.turn_ms,
+                metrics.tool_ms,
+                metrics.interrupted,
+            )
             await websocket.send_json({"type": "turn_complete"})
+            await websocket.send_json(
+                {
+                    "type": "metrics",
+                    "turn": metrics.to_dict(),
+                    "session": tracker.stats.to_dict(),
+                }
+            )
 
 
 @app.websocket("/ws")
@@ -194,7 +232,7 @@ async def voice_socket(websocket: WebSocket) -> None:
         await websocket.accept()
         logger.info("live_session_started connection_id=%s", connection_id)
 
-        user_id = f"workshop-{uuid4().hex[:8]}"
+        user_id = f"user-{uuid4().hex[:8]}"
         session = await runner.session_service.create_session(app_name=APP_NAME, user_id=user_id)
         queue = LiveRequestQueue()
         events = runner.run_live(
@@ -205,7 +243,9 @@ async def voice_socket(websocket: WebSocket) -> None:
         )
 
         upstream = asyncio.create_task(browser_to_agent(websocket, queue))
-        downstream = asyncio.create_task(agent_to_browser(websocket, events))
+        downstream = asyncio.create_task(
+            agent_to_browser(websocket, events, TurnTracker(), connection_id)
+        )
         tasks = [upstream, downstream]
         done, pending = await asyncio.wait(
             {upstream, downstream}, return_when=asyncio.FIRST_COMPLETED

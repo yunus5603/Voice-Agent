@@ -46,16 +46,23 @@ check(
     "set TEXT_MODEL=gemini-3.6-flash in .env",
 )
 check(
-    os.getenv("LIVE_MODEL", "gemini-3.1-flash-live-preview")
-    == "gemini-3.1-flash-live-preview",
+    os.getenv("LIVE_MODEL", "gemini-3.1-flash-live-preview") == "gemini-3.1-flash-live-preview",
     "Live model",
     "set LIVE_MODEL=gemini-3.1-flash-live-preview in .env",
 )
 
-expected = [f"checkpoints/{name}" for name in [
-    "00_start", "01_basic", "02_tool", "03_voice", "04_slow_failure",
-    "05_custom_streaming", "06_production"
-]]
+expected = [
+    f"workshop/checkpoints/{name}"
+    for name in [
+        "00_start",
+        "01_basic",
+        "02_tool",
+        "03_voice",
+        "04_slow_failure",
+        "05_custom_streaming",
+        "06_production",
+    ]
+]
 check(all((ROOT / folder).is_dir() for folder in expected), "Workshop checkpoints", "re-clone repo")
 
 print("READY")

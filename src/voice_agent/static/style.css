@@ -1,0 +1,18 @@
+:root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+body { margin: 0; min-height: 100vh; background: #08111d; color: #eaf2ff; display: grid; place-items: center; }
+main { width: min(720px, calc(100% - 40px)); }
+.eyebrow { color: #38d9ff; font-weight: 800; letter-spacing: .12em; font-size: .8rem; }
+h1 { font-size: clamp(3rem, 9vw, 6rem); margin: .2em 0; }
+p { color: #9aaec4; font-size: 1.15rem; }
+button { margin: 24px 0 10px; border: 0; border-radius: 999px; padding: 16px 24px; font: inherit; font-weight: 800; background: #78f0b2; color: #08111d; cursor: pointer; }
+button.connected { background: #ff6b7a; }
+#status { font-size: .9rem; }
+#events { margin-top: 30px; border-top: 1px solid #274158; padding-top: 20px; min-height: 220px; }
+.event { padding: 12px 0; border-bottom: 1px solid #12263a; }
+.you { color: #78f0b2; } .agent { color: #38d9ff; } .tool { color: #ffc857; }
+
+#metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top: 24px; }
+.metric { background: #0e1c2c; border: 1px solid #1d3349; border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+.metric .label { color: #6f88a3; font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; }
+.metric span:last-child { font-size: 1.35rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.metrics-row { color: #8a9bb0; font-size: .85rem; }

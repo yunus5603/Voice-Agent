@@ -1,13 +1,16 @@
 # Checkpoint 06: harden the streaming web app
 
 This checkpoint extends the FastAPI/WebSocket application from checkpoint 05.
-It reuses the same browser UI so participants can compare server behavior
-without learning another interface.
+Its code has graduated into the main application, so read it in
+[`src/voice_agent/server.py`](../../../src/voice_agent/server.py). The
+`server.py` here re-exports that app so the workshop command still works.
+Compare it with [`05_custom_streaming/server.py`](../05_custom_streaming/server.py)
+to see exactly what hardening adds.
 
 ## Run it
 
 ```bash
-cd checkpoints/06_production
+cd workshop/checkpoints/06_production
 uv run uvicorn server:app --reload --port 8002
 ```
 
