@@ -4,37 +4,24 @@ The app is a single FastAPI service. The browser streams microphone audio over
 one WebSocket, and the server bridges it to a Gemini Live session through
 Google ADK. Everything below refers to [`src/voice_agent/server.py`](../src/voice_agent/server.py).
 
+![Architecture: browser, FastAPI service, ADK runner and Gemini Live](images/architecture.svg)
+
 ## One conversational turn
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant B as Browser (mic + speaker)
-    participant S as FastAPI /ws
-    participant Q as ADK LiveRequestQueue
-    participant R as ADK Runner (run_live)
-    participant G as Gemini Live
-    participant T as find_rooms tool
-
-    B->>S: {"type":"audio", data: PCM16 @16 kHz} (about every 85 ms)
-    S->>S: validate size, MIME, Base64
-    S->>Q: send_realtime(Blob)
-    Q->>R: stream
-    R->>G: bidirectional audio stream
-    G-->>R: input transcription
-    R-->>S: event.input_transcription
-    S-->>B: {"type":"transcript","speaker":"you"}
-    G-->>R: function_call find_rooms(after_hour, minimum_capacity)
-    R->>T: run in tool thread pool (max 4 workers)
-    T-->>R: {"status":"success","rooms":[...]}
-    R->>G: function_response
-    S-->>B: {"type":"tool","phase":"call" / "result"}
-    G-->>R: audio chunks (PCM @24 kHz) + output transcription
-    R-->>S: events
-    S-->>B: {"type":"audio"} … {"type":"transcript","speaker":"agent"}
-    G-->>R: turn_complete
-    S-->>B: {"type":"turn_complete"} + {"type":"metrics"}
-```
+1. **Capture.** The browser records the mic, downsamples to 16 kHz PCM16 and
+   sends a JSON frame (`{"type":"audio","data":"<base64>"}`) about every 85 ms.
+2. **Validate.** `browser_to_agent` rejects frames over 32 KB, bad JSON, wrong
+   MIME types, invalid Base64 or audio chunks over 16 KB, then calls
+   `LiveRequestQueue.send_realtime()`.
+3. **Understand.** The ADK runner streams the audio to Gemini Live, which
+   detects speech, transcribes it and decides to call
+   `find_rooms(after_hour, minimum_capacity)`.
+4. **Act.** ADK runs the tool in a bounded thread pool (4 workers) and returns
+   `{"status":"success","rooms":[...]}` to the model.
+5. **Respond.** Gemini streams 24 kHz audio and an output transcript.
+   `agent_to_browser` forwards audio, transcripts and `tool` call/result events.
+6. **Measure.** On `turn_complete`, `TurnTracker` emits the turn's latency
+   record, which is logged and sent to the browser panel.
 
 Two asyncio tasks run per connection, `browser_to_agent` (upstream) and
 `agent_to_browser` (downstream). The server waits on whichever finishes first,

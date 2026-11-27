@@ -30,23 +30,7 @@ measures response latency for every turn.
 
 ## How it works
 
-```mermaid
-flowchart LR
-    subgraph Browser
-        MIC["🎤 Mic<br/>PCM16 16 kHz"] --> WSC[WebSocket client]
-        WSC --> SPK["🔊 Playback<br/>PCM 24 kHz"]
-        WSC --> UI["Transcripts +<br/>latency panel"]
-    end
-    subgraph "FastAPI service"
-        WS["/ws endpoint<br/>validation + limits"] --> Q[ADK LiveRequestQueue]
-        R["ADK Runner<br/>run_live"] --> OUT["agent_to_browser<br/>+ TurnTracker"]
-    end
-    WSC <--> WS
-    Q --> R
-    R <--> G[(Gemini Live)]
-    R <--> T[find_rooms tool]
-    OUT --> WSC
-```
+![Architecture: browser, FastAPI service, ADK runner and Gemini Live](docs/images/architecture.svg)
 
 The full turn-by-turn sequence, how interruptions and slow tools are handled,
 and how latency is measured are in **[docs/architecture.md](docs/architecture.md)**.
