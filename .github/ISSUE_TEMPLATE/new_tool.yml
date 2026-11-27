@@ -1,22 +1,22 @@
-name: New tool or backend
-description: Propose a tool the agent can call, or a new room/calendar backend
+name: Question pack or interviewer tool
+description: Propose a question pack for a role, or a new tool the interviewer can call
 labels: [enhancement, tool]
 body:
   - type: textarea
     id: goal
     attributes:
-      label: What should the user be able to say?
-      placeholder: '"Which rooms have a video screen tomorrow morning?"'
+      label: What should the interviewer be able to do, or which role needs a pack?
+      placeholder: 'A question pack for data engineering interviews'
     validations:
       required: true
   - type: textarea
     id: signature
     attributes:
-      label: Proposed tool signature
-      render: python
+      label: Proposed questions or tool signature
+      render: yaml
       placeholder: |
-        def find_rooms_with_equipment(after_hour: int, equipment: list[str]) -> dict:
-            """..."""
+        - id: pipeline-backfill
+          text: How would you backfill a year of data into a pipeline that is running?
   - type: textarea
     id: failure
     attributes:

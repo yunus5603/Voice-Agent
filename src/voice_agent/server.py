@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from google.adk.agents import LiveRequestQueue
@@ -20,13 +20,17 @@ from google.genai import errors as genai_errors
 from google.genai import types
 
 from voice_agent import __version__
-from voice_agent.agent import root_agent
+from voice_agent.interview.agent import interviewer_agent
+from voice_agent.interview.models import InterviewConfig
+from voice_agent.interview.planner import create_plan
+from voice_agent.interview.state import STATE_KEY, new_state
+from voice_agent.interview.store import InterviewStore
 from voice_agent.metrics import TurnTracker
 
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
 logger = logging.getLogger("voice_agent.server")
 
-APP_NAME = "adk-voice-agent"
+APP_NAME = "voice-interview-coach"
 STATIC_DIR = Path(__file__).resolve().with_name("static")
 MAX_WS_MESSAGE_BYTES = int(os.getenv("MAX_WS_MESSAGE_BYTES", "32768"))
 MAX_AUDIO_CHUNK_BYTES = int(os.getenv("MAX_AUDIO_CHUNK_BYTES", "16384"))
@@ -40,11 +44,12 @@ ALLOWED_ORIGINS = {
     if origin.strip()
 }
 
-runner = InMemoryRunner(app_name=APP_NAME, agent=root_agent)
+runner = InMemoryRunner(app_name=APP_NAME, agent=interviewer_agent)
+interviews = InterviewStore()
 active_sessions: set[str] = set()
 active_sessions_lock = asyncio.Lock()
 
-app = FastAPI(title="ADK Voice Agent", version=__version__)
+app = FastAPI(title="Voice Interview Coach", version=__version__)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
@@ -61,6 +66,41 @@ async def index() -> FileResponse:
 async def healthz() -> dict:
     """Liveness probe for Cloud Run and other orchestrators."""
     return {"status": "ok", "version": __version__}
+
+
+@app.post("/api/interviews", status_code=201)
+async def create_interview(config: InterviewConfig) -> dict:
+    """Plan an interview from a job description. The questions stay server-side."""
+    plan = await create_plan(config)
+    record = interviews.add(config, plan)
+    logger.info(
+        "interview_planned interview_id=%s type=%s questions=%d",
+        record.id,
+        plan.interview_type.value,
+        len(plan.questions),
+    )
+    return {
+        "interview_id": record.id,
+        "role_title": plan.role_title,
+        "summary": plan.summary,
+        "minutes": plan.minutes,
+        "question_count": len(plan.questions),
+    }
+
+
+@app.get("/api/interviews/{interview_id}")
+async def get_interview(interview_id: str) -> dict:
+    record = interviews.get(interview_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Interview not found")
+    state = record.final_state or {}
+    return {
+        "interview_id": record.id,
+        "role_title": record.plan.role_title,
+        "status": state.get("status", "joined" if record.claimed else "ready"),
+        "questions_asked": state.get("index", -1) + 1,
+        "question_count": len(record.plan.questions),
+    }
 
 
 def is_normal_close(exc: Exception) -> bool:
@@ -184,6 +224,9 @@ async def agent_to_browser(
                 await websocket.send_json(
                     {"type": "tool", "phase": "result", "name": part.function_response.name}
                 )
+                progress = progress_event(part.function_response)
+                if progress:
+                    await websocket.send_json(progress)
 
         if event.interrupted:
             tracker.interrupted()
@@ -210,13 +253,25 @@ async def agent_to_browser(
             )
 
 
+KICKOFF = "(The candidate has joined the call. Greet them and begin the interview.)"
+
+
+def progress_event(function_response) -> dict | None:
+    """Browser-facing progress for interview tools; never exposes question text."""
+    response = function_response.response or {}
+    if function_response.name == "next_question" and response.get("status") == "ok":
+        return {"type": "progress", "number": response["number"], "total": response["total"]}
+    if function_response.name == "end_interview":
+        return {"type": "interview_ended", "questions_asked": response.get("questions_asked")}
+    return None
+
+
 @app.websocket("/ws")
-async def voice_socket(websocket: WebSocket) -> None:
+async def voice_socket(websocket: WebSocket, interview_id: str = "") -> None:
     origin = websocket.headers.get("origin")
     if origin not in ALLOWED_ORIGINS:
         await websocket.close(code=1008, reason="Origin not allowed")
         return
-
     connection_id = uuid4().hex[:12]
     async with active_sessions_lock:
         has_capacity = len(active_sessions) < MAX_ACTIVE_SESSIONS
@@ -225,16 +280,28 @@ async def voice_socket(websocket: WebSocket) -> None:
     if not has_capacity:
         await websocket.close(code=1013, reason="Server is busy")
         return
+    record = interviews.claim(interview_id)
+    if record is None:
+        async with active_sessions_lock:
+            active_sessions.discard(connection_id)
+        await websocket.close(code=1008, reason="Unknown or already used interview")
+        return
 
     queue: LiveRequestQueue | None = None
     tasks: list[asyncio.Task] = []
+    session = None
     try:
         await websocket.accept()
         logger.info("live_session_started connection_id=%s", connection_id)
 
         user_id = f"user-{uuid4().hex[:8]}"
-        session = await runner.session_service.create_session(app_name=APP_NAME, user_id=user_id)
+        session = await runner.session_service.create_session(
+            app_name=APP_NAME,
+            user_id=user_id,
+            state={STATE_KEY: new_state(record.plan, record.config.persona)},
+        )
         queue = LiveRequestQueue()
+        queue.send_content(types.Content(role="user", parts=[types.Part(text=KICKOFF)]))
         events = runner.run_live(
             user_id=user_id,
             session_id=session.id,
@@ -282,4 +349,10 @@ async def voice_socket(websocket: WebSocket) -> None:
             task.cancel()
             with contextlib.suppress(asyncio.CancelledError, Exception):
                 await task
-        logger.info("live_session_ended connection_id=%s", connection_id)
+        if session is not None:
+            with contextlib.suppress(Exception):
+                final = await runner.session_service.get_session(
+                    app_name=APP_NAME, user_id=session.user_id, session_id=session.id
+                )
+                record.final_state = (final.state if final else {}).get(STATE_KEY)
+        logger.info("live_session_ended connection_id=%s interview_id=%s", connection_id, record.id)

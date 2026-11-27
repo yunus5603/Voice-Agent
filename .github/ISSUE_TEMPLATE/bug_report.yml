@@ -16,7 +16,7 @@ body:
       placeholder: |
         1. uv run uvicorn voice_agent.server:app --port 8002
         2. Connect the microphone
-        3. Say "find a room after three"
+        3. Plan a behavioural interview and answer the first question
     validations:
       required: true
   - type: textarea

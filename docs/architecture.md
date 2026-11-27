@@ -1,8 +1,24 @@
 # Architecture
 
-The app is a single FastAPI service. The browser streams microphone audio over
-one WebSocket, and the server bridges it to a Gemini Live session through
-Google ADK. Everything below refers to [`src/voice_agent/server.py`](../src/voice_agent/server.py).
+The app is a single FastAPI service. `POST /api/interviews` plans an interview
+from a job description; the browser then streams microphone audio over one
+WebSocket per interview, and the server bridges it to a Gemini Live session
+through Google ADK. Code references are to [`src/voice_agent/`](../src/voice_agent/).
+
+## Before the call: planning
+
+The planner ([`interview/planner.py`](../src/voice_agent/interview/planner.py))
+asks Gemini Flash for an `InterviewPlan` using structured output
+(`response_schema=InterviewPlan`), with examples from the best-matching
+question pack in the prompt. The result is normalised: question count, level
+and length are pinned to the request, ids are made unique slugs, and missing
+rubrics are filled from the pack. Any failure falls back to the pack itself, so
+planning never blocks an interview. The plan stays on the server; the browser
+only gets an id, the role title and the question count.
+
+When the WebSocket opens, the plan is written to ADK session state
+(`state["interview"]`) and a short kickoff message is queued so the
+interviewer greets the candidate first.
 
 ![Architecture: browser, FastAPI service, ADK runner and Gemini Live](images/architecture.svg)
 
@@ -14,12 +30,16 @@ Google ADK. Everything below refers to [`src/voice_agent/server.py`](../src/voic
    MIME types, invalid Base64 or audio chunks over 16 KB, then calls
    `LiveRequestQueue.send_realtime()`.
 3. **Understand.** The ADK runner streams the audio to Gemini Live, which
-   detects speech, transcribes it and decides to call
-   `find_rooms(after_hour, minimum_capacity)`.
-4. **Act.** ADK runs the tool in a bounded thread pool (4 workers) and returns
-   `{"status":"success","rooms":[...]}` to the model.
+   detects the end of the answer, transcribes it, and decides to call
+   `add_note(...)` and then `next_question()`.
+4. **Act.** ADK runs the tools in a bounded thread pool (4 workers). They read
+   and write `state["interview"]` through pure functions in
+   [`interview/state.py`](../src/voice_agent/interview/state.py), and return the
+   next question with its follow-ups, or `time_up` / `no_more_questions`.
 5. **Respond.** Gemini streams 24 kHz audio and an output transcript.
-   `agent_to_browser` forwards audio, transcripts and `tool` call/result events.
+   `agent_to_browser` forwards audio, captions and tool events, plus a
+   `progress` event (question n of N, never the question text) and
+   `interview_ended`.
 6. **Measure.** On `turn_complete`, `TurnTracker` emits the turn's latency
    record, which is logged and sent to the browser panel.
 
@@ -27,6 +47,19 @@ Two asyncio tasks run per connection, `browser_to_agent` (upstream) and
 `agent_to_browser` (downstream). The server waits on whichever finishes first,
 cancels the other, closes the queue and frees the session slot in a `finally`
 block, so a dropped tab or a Gemini error never leaks a live session.
+
+## Why the plan lives in state, not the prompt
+
+Putting all the questions in the system prompt works in a demo and fails in
+practice: the model skips questions, asks two at once, or runs over time. Here
+the prompt only describes *how* to interview. *What* to ask comes from
+`next_question`, one question at a time; `time_left` reports the remaining
+budget and suggests moving on when an answer overruns its share; and the state
+machine refuses new questions once time is up. All of it is deterministic code
+with unit tests, including a full scripted interview.
+
+When the session ends, the final state (progress and notes) is copied to the
+interview record for the feedback report.
 
 ## Interruptions (barge-in)
 
