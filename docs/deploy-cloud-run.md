@@ -50,7 +50,7 @@ gcloud run services update adk-voice-agent --region "$REGION" \
   --update-env-vars "^@^WS_ALLOWED_ORIGINS=$URL"
 ```
 
-Open the URL, allow the microphone, and ask for a room. The browser needs
+Open the URL, paste a job description, and start an interview. The browser needs
 HTTPS for microphone access, which Cloud Run provides.
 
 ## 4. Watch it

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 620" width="1200" height="620" font-family="Inter, 'Segoe UI', system-ui, -apple-system, sans-serif">
-  <title>Voice Room Finder architecture</title>
-  <desc>Browser streams microphone audio over a WebSocket to a FastAPI service. The service validates frames, feeds an ADK LiveRequestQueue, and the ADK runner streams to Gemini Live and calls the find_rooms tool. Audio, transcripts, tool events and latency metrics stream back to the browser.</desc>
+  <title>Voice Interview Coach architecture</title>
+  <desc>Browser streams microphone audio over a WebSocket to a FastAPI service. The service validates frames, feeds an ADK LiveRequestQueue, and the ADK runner streams to Gemini Live and calls the interview tools that hold the plan. Audio, transcripts, tool events and latency metrics stream back to the browser.</desc>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#8aa4bf"/>
@@ -36,8 +36,8 @@
 
   <!-- Canvas -->
   <rect x="0" y="0" width="1200" height="620" rx="20" fill="#08111d"/>
-  <text x="40" y="48" fill="#eaf2ff" font-size="22" font-weight="800">Voice Room Finder</text>
-  <text x="40" y="72" class="sub">One WebSocket per user · two asyncio tasks per connection · Gemini Live over Google ADK</text>
+  <text x="40" y="48" fill="#eaf2ff" font-size="22" font-weight="800">Voice Interview Coach</text>
+  <text x="40" y="72" class="sub">Plan from a job description · one WebSocket per interview · Gemini Live over Google ADK</text>
 
   <!-- Column panels -->
   <rect x="32" y="100" width="240" height="410" rx="16" fill="#0b1726" stroke="#1a2f45"/>
@@ -60,9 +60,9 @@
 
   <rect x="52" y="374" width="200" height="112" rx="12" class="box"/>
   <text x="72" y="404" class="title">Live panel</text>
-  <text x="72" y="428" class="label">Transcripts · tool events</text>
-  <text x="72" y="450" class="label">Latency p50 / p95</text>
-  <text x="72" y="472" class="label">Turns · interruptions</text>
+  <text x="72" y="428" class="label">Captions · progress</text>
+  <text x="72" y="450" class="label">Countdown timer</text>
+  <text x="72" y="472" class="label">Latency p50 / p95</text>
 
   <!-- Service: upstream lane -->
   <text x="350" y="160" class="lane" fill="#78f0b2" style="fill:#78f0b2">UPSTREAM</text>
@@ -94,8 +94,8 @@
 
   <!-- Tool -->
   <rect x="730" y="410" width="140" height="70" rx="12" class="box" stroke="#6b5a2a"/>
-  <text x="746" y="440" class="title mono" font-size="13.5">find_rooms()</text>
-  <text x="746" y="462" class="sub">typed · safe errors</text>
+  <text x="746" y="440" class="title" font-size="13">Interview tools</text>
+  <text x="746" y="462" class="sub">plan held in state</text>
 
   <!-- Guardrail chips -->
   <g>
@@ -146,7 +146,7 @@
     <text x="170" y="585" fill="#4f6a86">→</text>
     <text x="192" y="585" fill="#b9c9da">2  frames validated, queued</text>
     <text x="388" y="585" fill="#4f6a86">→</text>
-    <text x="410" y="585" fill="#b69cff">3  Gemini hears, calls find_rooms</text>
+    <text x="410" y="585" fill="#b69cff">3  agent calls next_question</text>
     <text x="640" y="585" fill="#4f6a86">→</text>
     <text x="662" y="585" fill="#38d9ff">4  audio + transcript stream back</text>
     <text x="892" y="585" fill="#4f6a86">→</text>

@@ -15,7 +15,8 @@ uv run uvicorn server:app --reload --port 8002
 ```
 
 Open [http://localhost:8002](http://localhost:8002), connect the microphone,
-ask for a room, and interrupt the response.
+and talk to it. The main app has since become the Voice Interview Coach, so
+this now starts the interviewer; the room agent lives on in checkpoints 00 to 05.
 
 ## Improvements implemented here
 

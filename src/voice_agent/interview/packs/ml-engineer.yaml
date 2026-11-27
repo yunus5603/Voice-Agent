@@ -1,0 +1,48 @@
+id: ml-engineer
+title: Machine learning and AI engineering
+interview_type: technical
+keywords: [machine learning, ml, ai, llm, llms, genai, generative, rag, embeddings, model, models, pytorch, tensorflow, nlp, mlops, agents, fine-tuning, data scientist, evaluation]
+criteria:
+  - name: Correctness
+    description: Technically sound approach with the right building blocks.
+  - name: Depth
+    description: Understands why it works, its failure modes and its costs.
+  - name: Evaluation
+    description: Explains how they would measure quality, not just build it.
+  - name: Clarity
+    description: Structured explanation that a teammate could follow.
+questions:
+  - id: rag-design
+    text: Walk me through how you'd build a question-answering system over a company's internal documents.
+    probes: Retrieval design, chunking, grounding and avoiding hallucination.
+    follow_ups:
+      - How would you know if answers are getting worse?
+      - What do you do when the right document isn't retrieved?
+  - id: llm-eval
+    text: How do you evaluate an LLM feature before and after it ships?
+    probes: Offline evals, golden sets, LLM-as-judge pitfalls and online metrics.
+    follow_ups:
+      - How do you trust an LLM judge?
+      - What would make you roll back a prompt change?
+  - id: latency-cost
+    text: Your LLM feature is too slow and too expensive. What levers do you have?
+    probes: Model choice, caching, prompt size, streaming and batching trade-offs.
+    follow_ups:
+      - Which lever would you try first, and why?
+  - id: production-model
+    text: Tell me about a model you put into production. What broke after launch?
+    probes: Real-world MLOps experience, monitoring and drift.
+    follow_ups:
+      - How did you detect it?
+      - What did you change in the pipeline afterwards?
+  - id: agent-reliability
+    text: How would you make an AI agent that calls tools reliable enough for real users?
+    probes: Tool design, structured errors, guardrails, retries and evaluation.
+    follow_ups:
+      - What should happen when a tool is slow or fails?
+      - How do you test it without calling the real model?
+  - id: data-quality
+    text: Your model performs well offline but poorly in production. How do you investigate?
+    probes: Train/serve skew, data leakage and distribution shift.
+    follow_ups:
+      - How would you catch this before launch next time?

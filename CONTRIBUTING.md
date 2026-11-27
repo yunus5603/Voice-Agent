@@ -30,21 +30,23 @@ build.
 
 | Path | What |
 | --- | --- |
-| `src/voice_agent/server.py` | FastAPI app, WebSocket bridge, guardrails |
-| `src/voice_agent/agent.py` | ADK agent definition and system prompt |
-| `src/voice_agent/room_tools.py` | Tools the agent can call |
+| `src/voice_agent/server.py` | FastAPI app: REST API, WebSocket bridge, guardrails |
+| `src/voice_agent/interview/` | Planner, question packs, interview state, tools, interviewer agent |
+| `src/voice_agent/interview/packs/` | Question packs (YAML) |
 | `src/voice_agent/metrics.py` | Per-turn latency tracking |
-| `src/voice_agent/static/` | Browser UI (mic capture, playback, metrics panel) |
+| `src/voice_agent/static/` | Browser UI (setup, interview room, mic capture, playback) |
 | `workshop/` | The step-by-step workshop the app grew out of |
 | `docs/` | Architecture and deployment notes |
 
 ## Good first contributions
 
-- **Add a tool.** Write a typed function with a docstring in `room_tools.py`
-  (or a new module), return `{"status": "success" | "error", ...}` instead of
-  raising, register it in `agent.py`, and add a unit test.
-- **Another room backend.** Replace the in-memory `ROOMS` list with Google
-  Calendar, Microsoft Graph or a JSON file behind the same function signature.
+- **Add a question pack.** Copy `src/voice_agent/interview/packs/backend.yaml`,
+  set a new `id`, `title`, `interview_type` and `keywords` (words that appear in
+  matching job descriptions), and write at least 6 questions with what each
+  probes and two follow-ups. `uv run pytest tests/test_planner.py` validates it.
+  Wanted: frontend, data engineering, DevOps/SRE, product management, mobile.
+- **A new interviewer persona.** Add one to `Persona` and `PERSONAS` in
+  `interview/agent.py`, with a test.
 - **AudioWorklet.** Replace the deprecated `ScriptProcessorNode` in `app.js`.
 - **Metrics.** Export `turn_metrics` as OpenTelemetry histograms.
 

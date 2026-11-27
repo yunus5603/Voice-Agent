@@ -1,16 +1,18 @@
 [project]
 name = "adk-voice-agent"
-version = "0.2.0"
-description = "Real-time voice agent for finding meeting rooms, built on Google ADK, Gemini Live and FastAPI WebSockets"
+version = "0.3.0"
+description = "Voice mock-interview coach: a live spoken interviewer for your target job, built on Google ADK, Gemini Live and FastAPI"
 license = "MIT"
-keywords = ["voice-agent", "google-adk", "gemini-live", "fastapi", "websockets", "realtime"]
+keywords = ["interview-practice", "mock-interview", "voice-agent", "google-adk", "gemini-live", "fastapi", "websockets", "realtime"]
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
 dependencies = [
   "certifi>=2025.1.31",
   "fastapi>=0.116,<1",
   "google-adk>=2.3,<3",
+  "pydantic>=2.7,<3",
   "python-dotenv>=1.1,<2",
+  "pyyaml>=6,<7",
   "uvicorn[standard]>=0.35,<1",
 ]
 
