@@ -13,4 +13,3 @@ root_agent = Agent(
     ),
     tools=[find_rooms],
 )
-

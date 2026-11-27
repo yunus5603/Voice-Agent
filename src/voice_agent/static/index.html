@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Voice Room Finder</title>
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">GOOGLE ADK · GEMINI LIVE</p>
+      <h1>Room agent</h1>
+      <p>Connect, ask for a meeting room out loud, then interrupt the answer.</p>
+      <button id="connect">Connect microphone</button>
+      <p id="status" role="status">Disconnected</p>
+
+      <section id="metrics" aria-label="Latency">
+        <div class="metric"><span class="label">Last response</span><span id="m-last">–</span></div>
+        <div class="metric"><span class="label">p50 response</span><span id="m-p50">–</span></div>
+        <div class="metric"><span class="label">p95 response</span><span id="m-p95">–</span></div>
+        <div class="metric"><span class="label">Tool p50</span><span id="m-tool">–</span></div>
+        <div class="metric"><span class="label">Turns · barge-ins</span><span id="m-turns">0 · 0</span></div>
+      </section>
+
+      <section id="events" aria-live="polite"></section>
+    </main>
+    <script src="/static/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,30 @@
+name: New tool or backend
+description: Propose a tool the agent can call, or a new room/calendar backend
+labels: [enhancement, tool]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: What should the user be able to say?
+      placeholder: '"Which rooms have a video screen tomorrow morning?"'
+    validations:
+      required: true
+  - type: textarea
+    id: signature
+    attributes:
+      label: Proposed tool signature
+      render: python
+      placeholder: |
+        def find_rooms_with_equipment(after_hour: int, equipment: list[str]) -> dict:
+            """..."""
+  - type: textarea
+    id: failure
+    attributes:
+      label: Failure behaviour
+      description: What should the agent say if this tool is slow or fails?
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Contribution
+      options:
+        - label: I'd like to implement this myself

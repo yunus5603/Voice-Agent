@@ -1,7 +1,7 @@
 from google.adk.agents import Agent
 
-from adk_voice_workshop.config import live_model
-from adk_voice_workshop.room_tools import find_rooms
+from voice_agent.config import live_model
+from voice_agent.room_tools import find_rooms
 
 root_agent = Agent(
     name="room_agent",

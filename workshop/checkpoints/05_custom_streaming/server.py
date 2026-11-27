@@ -77,7 +77,7 @@ async def agent_to_browser(websocket: WebSocket, events) -> None:
                 {"type": "transcript", "speaker": "agent", "text": output_text}
             )
 
-        for part in (event.content.parts if event.content and event.content.parts else []):
+        for part in event.content.parts if event.content and event.content.parts else []:
             mime_type = part.inline_data.mime_type if part.inline_data else None
             if part.inline_data and mime_type and mime_type.startswith("audio/pcm"):
                 await websocket.send_json(

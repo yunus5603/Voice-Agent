@@ -1,7 +1,9 @@
 [project]
-name = "adk-voice-workshop"
-version = "0.1.0"
-description = "Guided workshop: build a voice agent with Google ADK"
+name = "adk-voice-agent"
+version = "0.2.0"
+description = "Real-time voice agent for finding meeting rooms, built on Google ADK, Gemini Live and FastAPI WebSockets"
+license = "MIT"
+keywords = ["voice-agent", "google-adk", "gemini-live", "fastapi", "websockets", "realtime"]
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
 dependencies = [
@@ -14,6 +16,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+  "httpx>=0.28,<1",
   "pytest>=8.4,<9",
   "ruff>=0.12,<1",
 ]
@@ -33,5 +36,5 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/adk_voice_workshop"]
+packages = ["src/voice_agent", "src/adk_voice_workshop"]
 
