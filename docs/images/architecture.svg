@@ -1,0 +1,155 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 620" width="1200" height="620" font-family="Inter, 'Segoe UI', system-ui, -apple-system, sans-serif">
+  <title>Voice Room Finder architecture</title>
+  <desc>Browser streams microphone audio over a WebSocket to a FastAPI service. The service validates frames, feeds an ADK LiveRequestQueue, and the ADK runner streams to Gemini Live and calls the find_rooms tool. Audio, transcripts, tool events and latency metrics stream back to the browser.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8aa4bf"/>
+    </marker>
+    <marker id="arrowUp" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#78f0b2"/>
+    </marker>
+    <marker id="arrowDown" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#38d9ff"/>
+    </marker>
+    <marker id="arrowGem" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#b69cff"/>
+    </marker>
+    <marker id="arrowTool" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#ffc857"/>
+    </marker>
+    <linearGradient id="gem" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4f7cff"/>
+      <stop offset="0.55" stop-color="#8e75ff"/>
+      <stop offset="1" stop-color="#d76bd0"/>
+    </linearGradient>
+    <style>
+      .title { fill: #eaf2ff; font-size: 15px; font-weight: 700; }
+      .sub { fill: #8aa4bf; font-size: 12px; }
+      .lane { fill: #6f88a3; font-size: 11px; font-weight: 700; letter-spacing: .12em; }
+      .label { fill: #b9c9da; font-size: 12px; }
+      .mono { font-family: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace; }
+      .box { fill: #0f1f31; stroke: #23405c; stroke-width: 1.2; }
+      .chip { fill: #10243a; stroke: #23405c; }
+      .chipt { fill: #9fb6cc; font-size: 11.5px; }
+    </style>
+  </defs>
+
+  <!-- Canvas -->
+  <rect x="0" y="0" width="1200" height="620" rx="20" fill="#08111d"/>
+  <text x="40" y="48" fill="#eaf2ff" font-size="22" font-weight="800">Voice Room Finder</text>
+  <text x="40" y="72" class="sub">One WebSocket per user · two asyncio tasks per connection · Gemini Live over Google ADK</text>
+
+  <!-- Column panels -->
+  <rect x="32" y="100" width="240" height="410" rx="16" fill="#0b1726" stroke="#1a2f45"/>
+  <text x="52" y="128" class="lane">BROWSER</text>
+
+  <rect x="330" y="100" width="560" height="410" rx="16" fill="#0b1726" stroke="#1a2f45"/>
+  <text x="350" y="128" class="lane">FASTAPI SERVICE · src/voice_agent</text>
+
+  <rect x="948" y="100" width="220" height="410" rx="16" fill="#0b1726" stroke="#1a2f45"/>
+  <text x="968" y="128" class="lane">GOOGLE</text>
+
+  <!-- Browser boxes -->
+  <rect x="52" y="150" width="200" height="72" rx="12" class="box"/>
+  <text x="72" y="180" class="title">🎤  Microphone</text>
+  <text x="72" y="202" class="sub mono">PCM16 · 16 kHz · ~85 ms</text>
+
+  <rect x="52" y="262" width="200" height="72" rx="12" class="box"/>
+  <text x="72" y="292" class="title">🔊  Playback</text>
+  <text x="72" y="314" class="sub mono">PCM · 24 kHz</text>
+
+  <rect x="52" y="374" width="200" height="112" rx="12" class="box"/>
+  <text x="72" y="404" class="title">Live panel</text>
+  <text x="72" y="428" class="label">Transcripts · tool events</text>
+  <text x="72" y="450" class="label">Latency p50 / p95</text>
+  <text x="72" y="472" class="label">Turns · interruptions</text>
+
+  <!-- Service: upstream lane -->
+  <text x="350" y="160" class="lane" fill="#78f0b2" style="fill:#78f0b2">UPSTREAM</text>
+  <rect x="350" y="170" width="170" height="80" rx="12" class="box" stroke="#2f6b54"/>
+  <text x="366" y="198" class="title mono" font-size="13.5">browser_to_agent</text>
+  <text x="366" y="220" class="sub">validate JSON, MIME,</text>
+  <text x="366" y="237" class="sub">Base64, size caps</text>
+
+  <rect x="550" y="170" width="150" height="80" rx="12" class="box"/>
+  <text x="566" y="203" class="title mono" font-size="13.5">LiveRequest</text>
+  <text x="566" y="222" class="title mono" font-size="13.5">Queue</text>
+  <text x="566" y="240" class="sub">ADK</text>
+
+  <!-- Runner spanning lanes -->
+  <rect x="730" y="170" width="140" height="210" rx="12" fill="#13263c" stroke="#3b5f86" stroke-width="1.4"/>
+  <text x="746" y="200" class="title">ADK Runner</text>
+  <text x="746" y="222" class="sub mono">run_live()</text>
+  <text x="746" y="254" class="label">BIDI streaming</text>
+  <text x="746" y="276" class="label">session resume</text>
+  <text x="746" y="298" class="label">context compress</text>
+  <text x="746" y="320" class="label">≤100 LLM calls</text>
+  <text x="746" y="342" class="label">tool pool · 4</text>
+
+  <!-- Service: downstream lane -->
+  <text x="350" y="300" class="lane" style="fill:#38d9ff">DOWNSTREAM</text>
+  <rect x="350" y="310" width="350" height="70" rx="12" class="box" stroke="#1f5d73"/>
+  <text x="366" y="338" class="title mono" font-size="13.5">agent_to_browser  +  TurnTracker</text>
+  <text x="366" y="362" class="sub">forward audio · transcripts · tool events · per-turn metrics</text>
+
+  <!-- Tool -->
+  <rect x="730" y="410" width="140" height="70" rx="12" class="box" stroke="#6b5a2a"/>
+  <text x="746" y="440" class="title mono" font-size="13.5">find_rooms()</text>
+  <text x="746" y="462" class="sub">typed · safe errors</text>
+
+  <!-- Guardrail chips -->
+  <g>
+    <rect x="350" y="410" width="350" height="76" rx="12" fill="none" stroke="#1a2f45" stroke-dasharray="4 4"/>
+    <text x="364" y="430" class="lane">GUARDRAILS</text>
+    <rect x="362" y="440" width="104" height="18" rx="9" class="chip"/><text x="372" y="453" class="chipt">Origin allowlist</text>
+    <rect x="472" y="440" width="96" height="18" rx="9" class="chip"/><text x="482" y="453" class="chipt">32 KB frames</text>
+    <rect x="574" y="440" width="114" height="18" rx="9" class="chip"/><text x="584" y="453" class="chipt">Max 20 sessions</text>
+    <rect x="362" y="463" width="126" height="18" rx="9" class="chip"/><text x="372" y="476" class="chipt">No transcript logs</text>
+    <rect x="494" y="463" width="110" height="18" rx="9" class="chip"/><text x="504" y="476" class="chipt">Safe error IDs</text>
+    <rect x="610" y="463" width="78" height="18" rx="9" class="chip"/><text x="620" y="476" class="chipt">Cleanup</text>
+  </g>
+
+  <!-- Gemini -->
+  <rect x="968" y="190" width="180" height="170" rx="16" fill="url(#gem)" opacity="0.95"/>
+  <text x="988" y="228" fill="#ffffff" font-size="18" font-weight="800">Gemini Live</text>
+  <text x="988" y="252" fill="#f1ecff" font-size="12">native audio in / out</text>
+  <text x="988" y="282" fill="#f1ecff" font-size="12">voice activity detection</text>
+  <text x="988" y="302" fill="#f1ecff" font-size="12">transcription</text>
+  <text x="988" y="322" fill="#f1ecff" font-size="12">function calling</text>
+
+  <!-- Arrows: mic -> upstream -->
+  <path d="M252,186 C300,186 300,210 346,210" fill="none" stroke="#78f0b2" stroke-width="2" marker-end="url(#arrowUp)"/>
+  <text x="276" y="166" class="sub mono" font-size="11" style="fill:#78f0b2">ws ↑</text>
+  <!-- upstream -> queue -> runner -->
+  <path d="M520,210 L546,210" stroke="#78f0b2" stroke-width="2" marker-end="url(#arrowUp)"/>
+  <path d="M700,210 L726,210" stroke="#78f0b2" stroke-width="2" marker-end="url(#arrowUp)"/>
+  <!-- runner -> downstream -->
+  <path d="M730,345 L704,345" stroke="#38d9ff" stroke-width="2" marker-end="url(#arrowDown)"/>
+  <!-- downstream -> playback & panel -->
+  <path d="M350,335 C305,335 300,298 256,298" fill="none" stroke="#38d9ff" stroke-width="2" marker-end="url(#arrowDown)"/>
+  <path d="M350,355 C300,355 300,430 256,430" fill="none" stroke="#38d9ff" stroke-width="2" marker-end="url(#arrowDown)"/>
+  <text x="276" y="388" class="sub mono" font-size="11" style="fill:#38d9ff">ws ↓</text>
+  <!-- runner <-> gemini -->
+  <path d="M874,240 L964,240" stroke="#b69cff" stroke-width="2" marker-end="url(#arrowGem)"/>
+  <path d="M964,310 L874,310" stroke="#b69cff" stroke-width="2" marker-end="url(#arrowGem)"/>
+  <text x="884" y="230" class="sub" font-size="11" style="fill:#b69cff">audio</text>
+  <text x="884" y="328" class="sub" font-size="11" style="fill:#b69cff">events</text>
+  <!-- runner <-> tool -->
+  <path d="M790,384 L790,406" stroke="#ffc857" stroke-width="2" marker-end="url(#arrowTool)"/>
+  <path d="M810,406 L810,384" stroke="#ffc857" stroke-width="2" marker-end="url(#arrowTool)"/>
+
+  <!-- Footer: one turn -->
+  <text x="40" y="550" class="lane">ONE TURN</text>
+  <g font-size="12.5">
+    <rect x="40" y="562" width="1120" height="36" rx="18" fill="#0f1f31" stroke="#1a2f45"/>
+    <text x="60" y="585" fill="#78f0b2">1  you speak</text>
+    <text x="170" y="585" fill="#4f6a86">→</text>
+    <text x="192" y="585" fill="#b9c9da">2  frames validated, queued</text>
+    <text x="388" y="585" fill="#4f6a86">→</text>
+    <text x="410" y="585" fill="#b69cff">3  Gemini hears, calls find_rooms</text>
+    <text x="640" y="585" fill="#4f6a86">→</text>
+    <text x="662" y="585" fill="#38d9ff">4  audio + transcript stream back</text>
+    <text x="892" y="585" fill="#4f6a86">→</text>
+    <text x="914" y="585" fill="#ffc857">5  turn_complete + latency metrics</text>
+  </g>
+</svg>
